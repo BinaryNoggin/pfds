@@ -1,7 +1,6 @@
 defmodule Q.Test do
   use ExUnit.Case, async: true
   use PropCheck
-  alias Q, as: Subject
 
   property "q is a FIFO structure" do
     forall terms <- non_empty(list(integer())) do
