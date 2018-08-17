@@ -34,6 +34,14 @@ defmodule Q.Test do
     end
   end
 
+  property "the length of a q is the same as the number of terms in the queue" do
+    forall terms <- non_empty(list(term())) do
+      with_queued_items(terms, fn queued ->
+        Q.length(queued) == length(terms)
+      end)
+    end
+  end
+
   def with_queued_items(items, process) do
     subject = Q.empty()
 
