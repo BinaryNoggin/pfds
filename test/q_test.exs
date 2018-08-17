@@ -21,18 +21,27 @@ defmodule Q.Test do
     not Enum.empty?(f)
   end
 
-  property "q is a FIFO structure" do
-    forall terms <- non_empty(list(integer())) do
-      with_queued_items(terms, fn queued ->
-        {result, _sub} =
-          Enum.reduce(terms, {true, queued}, fn term, {result, sub} ->
-            {:ok, head} = Q.head(sub)
-            {:ok, tail} = Q.tail(sub)
-            {result && head == term, tail}
-          end)
+  property "elements are added to the end of the queue" do
+    forall {q, term} <- {queue(), term()} do
+        q = Q.snoc(q, term)
+        term_is_on_the_end(q, term)
+    end
+  end
 
-        result
-      end)
+  def term_is_on_the_end(q, term) do
+    {:ok, tail} = Q.tail(q)
+    {:ok, head} = Q.head(q)
+    term_is_on_the_end(tail, term, head)
+  end
+
+  def term_is_on_the_end(q, term, last_head) do
+    case Q.tail(q) do
+      {:ok, tail} ->
+        {:ok, head} = Q.head(q)
+        term_is_on_the_end(tail, term, head)
+
+      {:error, :empty} ->
+        last_head == term
     end
   end
 
@@ -66,16 +75,5 @@ defmodule Q.Test do
       {:error, :empty} ->
         Q.length(q) == 0
     end
-  end
-
-  def with_queued_items(items, process) do
-    subject = Q.empty()
-
-    queued =
-      Enum.reduce(items, subject, fn term, sub ->
-        Q.snoc(sub, term)
-      end)
-
-    process.(queued)
   end
 end
