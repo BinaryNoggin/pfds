@@ -2,6 +2,25 @@ defmodule Q.Test do
   use ExUnit.Case, async: true
   use PropCheck
 
+  def queue() do
+    let terms <- list(integer()) do
+      Enum.reduce(terms, Q.empty(), fn term, sub ->
+        Q.snoc(sub, term)
+      end)
+    end
+  end
+
+  property "q invariants" do
+    forall q <- queue() do
+      invariants(q)
+    end
+  end
+
+  def invariants(%{f: [], r: []}), do: true
+  def invariants(%{f: f}) do
+    not Enum.empty?(f)
+  end
+
   property "q is a FIFO structure" do
     forall terms <- non_empty(list(integer())) do
       with_queued_items(terms, fn queued ->
@@ -17,28 +36,35 @@ defmodule Q.Test do
     end
   end
 
-  property "q is empty only when there are no elements" do
-    forall terms <- list(term()) do
-      with_queued_items(terms, fn queued ->
-        Q.empty?(queued) == Enum.empty?(terms)
-      end)
+  property "q is empty only when all elements have been removed" do
+    forall q <- queue() do
+      only_empty_when_all_elements_removed(q)
     end
   end
 
-  property "the tail of a non-empty q always has one less element than q" do
-    forall terms <- non_empty(list(term())) do
-      with_queued_items(terms, fn queued ->
-        {:ok, tail} = Q.tail(queued)
-        Q.length(tail) == length(terms) - 1
-      end)
+  def only_empty_when_all_elements_removed(q) do
+    case Q.tail(q) do
+      {:ok, tail} ->
+        not Q.empty?(q) && only_empty_when_all_elements_removed(tail)
+
+      {:error, :empty} ->
+        Q.empty?(q)
     end
   end
 
   property "the length of a q is the same as the number of terms in the queue" do
-    forall terms <- non_empty(list(term())) do
-      with_queued_items(terms, fn queued ->
-        Q.length(queued) == length(terms)
-      end)
+    forall q <- queue() do
+      queue_length_same_as_terms_remaining(q)
+    end
+  end
+
+  def queue_length_same_as_terms_remaining(q) do
+    case Q.tail(q) do
+      {:ok, tail} ->
+        Q.length(q) == Q.length(tail) + 1 && queue_length_same_as_terms_remaining(tail)
+
+      {:error, :empty} ->
+        Q.length(q) == 0
     end
   end
 
