@@ -23,8 +23,15 @@ defmodule Q.Test do
 
   property "elements are added to the end of the queue" do
     forall {q, term} <- {queue(), term()} do
-        q = Q.snoc(q, term)
-        term_is_on_the_end(q, term)
+        new_q = Q.snoc(q, term)
+        term_is_on_the_end(new_q, term)
+    end
+  end
+
+  property "adding an element increases the length by 1" do
+    forall {q, term} <- {queue(), term()} do
+      new_q = Q.snoc(q, term)
+      Q.length(new_q) == Q.length(q) + 1
     end
   end
 
